@@ -14,13 +14,12 @@
 # limitations under the License.
 #
 
+DEV_DIR := $(dir $(lastword $(MAKEFILE_LIST)))
+
 PRODUCT_AAPT_CONFIG += xlarge large
 TARGET_SCREEN_HEIGHT := 2048
 TARGET_SCREEN_WIDTH := 1536
 TARGET_TEGRA_VERSION := t124
-
-$(call inherit-product, frameworks/native/build/phone-xxhdpi-2048-hwui-memory.mk)
-
 
 $(call inherit-product-if-exists, vendor/nvidia/shield/mocha.mk)
 
@@ -28,9 +27,62 @@ BOARD_USERDATAIMAGE_FILE_SYSTEM_TYPE := f2fs
 TARGET_USERIMAGES_USE_F2FS := true
 PRODUCT_CHARACTERISTICS := tablet
 
+# HIDL HALs
+$(call inherit-product, $(DEV_DIR)/hidl.mk)
+
 # Filesystem management tools
 PRODUCT_PACKAGES += \
     e2fsck fsck.f2fs mkfs.f2fs
-# Packaging
-BLOCK_BASED_OTA := false
 
+# Log
+PRODUCT_PACKAGES += \
+    dmesgLogging
+
+# Overlay
+DEVICE_PACKAGE_OVERLAYS += \
+    $(DEV_DIR)/overlay
+
+# Permissions
+PRODUCT_COPY_FILES += \
+    frameworks/native/data/etc/android.hardware.touchscreen.multitouch.jazzhand.xml:system/etc/permissions/android.hardware.touchscreen.multitouch.jazzhand.xml \
+    frameworks/native/data/etc/android.hardware.wifi.xml:system/etc/permissions/android.hardware.wifi.xml \
+    frameworks/native/data/etc/tablet_core_hardware.xml:system/etc/permissions/tablet_core_hardware.xml \
+    frameworks/native/data/etc/android.software.freeform_window_management.xml:system/etc/permissions/android.software.freeform_window_management.xml
+
+# Ramdisk
+PRODUCT_PACKAGES += \
+    fstab.tn8 \
+    init.tn8.rc \
+    ueventd.tn8.rc
+
+# Wifi
+PRODUCT_COPY_FILES += \
+    $(DEV_DIR)/wifi/dhcpcd.conf:system/etc/dhcpcd/dhcpcd.conf \
+    $(DEV_DIR)/wifi/p2p_supplicant_overlay.conf:system/etc/wifi/p2p_supplicant_overlay.conf
+
+$(call inherit-product-if-exists, hardware/broadcom/wlan/bcmdhd/config/config-bcm.mk)
+PRODUCT_PACKAGES += \
+    hostapd \
+    wpa_supplicant \
+    wpa_supplicant.conf
+
+LOCAL_OVERRIDES_PACKAGES := Bluetooth libbluetooth_jni
+
+BOARD_USES_LIBDRM := true
+USE_DRM_HWCOMPOSER := true
+
+ENABLE_LIBDRM := true
+BOARD_GPU_DRIVERS ?= tegra nouveau
+PRODUCT_PACKAGES += \
+    hwcomposer.drm \
+    gralloc.gbm \
+    libGLES_mesa
+
+# Audio policy configuration
+USE_XML_AUDIO_POLICY_CONF := 1
+PRODUCT_COPY_FILES += \
+	frameworks/av/services/audiopolicy/config/a2dp_audio_policy_configuration.xml:$(TARGET_COPY_OUT_VENDOR)/etc/a2dp_audio_policy_configuration.xml \
+	frameworks/av/services/audiopolicy/config/r_submix_audio_policy_configuration.xml:$(TARGET_COPY_OUT_VENDOR)/etc/r_submix_audio_policy_configuration.xml \
+	frameworks/av/services/audiopolicy/config/usb_audio_policy_configuration.xml:$(TARGET_COPY_OUT_VENDOR)/etc/usb_audio_policy_configuration.xml \
+	frameworks/av/services/audiopolicy/config/default_volume_tables.xml:$(TARGET_COPY_OUT_VENDOR)/etc/default_volume_tables.xml \
+	frameworks/av/services/audiopolicy/config/audio_policy_volumes.xml:$(TARGET_COPY_OUT_VENDOR)/etc/audio_policy_volumes.xml \

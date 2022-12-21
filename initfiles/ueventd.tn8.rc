@@ -1,0 +1,4 @@
+# Graphics
+/dev/ion                0666   system     graphics
+/dev/sw_sync            0660   system     graphics
+/dev/dri/*          	0777   system     graphics
